@@ -1,0 +1,395 @@
+{
+  "entities": {
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Registro de usuarios con privilegios de administración general",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 200 },
+        "role": { "type": "string", "enum": ["admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Partner": {
+      "title": "Partner",
+      "description": "Nodo de socio en la red multinivel Vive Next (datos públicos de red sin PII sensible)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "referralCode": { "type": "string", "minLength": 3, "maxLength": 32, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "sponsorId": { "type": "string", "maxLength": 128 },
+        "binaryParentId": { "type": "string", "maxLength": 128 },
+        "binaryLeg": { "type": "string", "enum": ["left", "right", "root"] },
+        "packageTier": { "type": "string", "enum": ["base", "emprendedor", "elite"] },
+        "rankId": {
+          "type": "string",
+          "enum": [
+            "consultor_elite",
+            "bronce",
+            "plata",
+            "oro",
+            "platino",
+            "rubi",
+            "diamante",
+            "doble_diamante",
+            "triple_diamante",
+            "diamante_corona",
+            "corona_universal"
+          ]
+        },
+        "status": { "type": "string", "enum": ["activo", "pendiente", "inactivo"] },
+        "role": { "type": "string", "enum": ["socio", "lider", "admin"] },
+        "personalPv": { "type": "number" },
+        "personalCv": { "type": "number" },
+        "leftBranchCv": { "type": "number" },
+        "rightBranchCv": { "type": "number" },
+        "teamCv": { "type": "number" },
+        "directCount": { "type": "integer" },
+        "activeLines": { "type": "integer" },
+        "firstWeekPurchase": { "type": "boolean" },
+        "uplineUids": { "type": "array" },
+        "pinHash": { "type": "string", "maxLength": 128 },
+        "joinedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "ownerUid",
+        "fullName",
+        "referralCode",
+        "sponsorId",
+        "binaryParentId",
+        "binaryLeg",
+        "packageTier",
+        "rankId",
+        "status",
+        "role",
+        "personalPv",
+        "personalCv",
+        "leftBranchCv",
+        "rightBranchCv",
+        "teamCv",
+        "directCount",
+        "activeLines",
+        "firstWeekPurchase",
+        "uplineUids",
+        "joinedAt",
+        "updatedAt"
+      ]
+    },
+    "PartnerPrivateInfo": {
+      "title": "PartnerPrivateInfo",
+      "description": "Información personal identificable (PII) aislada del socio",
+      "type": "object",
+      "properties": {
+        "partnerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "ciNumber": { "type": "string", "maxLength": 40 },
+        "city": { "type": "string", "maxLength": 80 },
+        "bankName": { "type": "string", "maxLength": 80 },
+        "bankAccount": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["partnerId", "ownerUid", "email", "phone", "ciNumber", "city", "bankName", "bankAccount", "updatedAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Producto de bienestar o paquete de afiliación Vive Next",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "sku": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "category": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "isPackage": { "type": "boolean" },
+        "packageTier": { "type": "string", "enum": ["none", "base", "emprendedor", "elite"] },
+        "retailPriceBs": { "type": "number" },
+        "wholesalePriceBs": { "type": "number" },
+        "firstPurchaseSurchargeBs": { "type": "number" },
+        "pv": { "type": "number" },
+        "cv": { "type": "number" },
+        "stock": { "type": "integer" },
+        "active": { "type": "boolean" },
+        "imageUrl": { "type": "string", "maxLength": 150000 },
+        "description": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "sku",
+        "name",
+        "category",
+        "isPackage",
+        "packageTier",
+        "retailPriceBs",
+        "wholesalePriceBs",
+        "firstPurchaseSurchargeBs",
+        "pv",
+        "cv",
+        "stock",
+        "active",
+        "imageUrl",
+        "description",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Pedido de productos o paquetes y su registro de pago",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "orderNumber": { "type": "string", "minLength": 3, "maxLength": 40 },
+        "buyerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "partnerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "partnerName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "sponsorId": { "type": "string", "maxLength": 128 },
+        "isFirstPurchase": { "type": "boolean" },
+        "items": { "type": "array" },
+        "subtotalBs": { "type": "number" },
+        "surchargeBs": { "type": "number" },
+        "totalBs": { "type": "number" },
+        "totalPv": { "type": "number" },
+        "totalCv": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["efectivo", "qr", "transferencia"] },
+        "paymentReference": { "type": "string", "maxLength": 120 },
+        "receiptNote": { "type": "string", "maxLength": 300 },
+        "paymentStatus": { "type": "string", "enum": ["pendiente", "validado", "rechazado"] },
+        "validatedBy": { "type": "string", "maxLength": 128 },
+        "pinProof": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "orderNumber",
+        "buyerUid",
+        "partnerId",
+        "partnerName",
+        "sponsorId",
+        "isFirstPurchase",
+        "items",
+        "subtotalBs",
+        "surchargeBs",
+        "totalBs",
+        "totalPv",
+        "totalCv",
+        "paymentMethod",
+        "paymentReference",
+        "receiptNote",
+        "paymentStatus",
+        "validatedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Commission": {
+      "title": "Commission",
+      "description": "Comisión calculada del Plan de Prosperidad (Bonos 1 al 9)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "partnerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "partnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "partnerName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "sourceOrderId": { "type": "string", "maxLength": 128 },
+        "bonusType": {
+          "type": "string",
+          "enum": [
+            "B1_VENTA_DIRECTA",
+            "B2_INICIO_RAPIDO",
+            "B3_UNILEVEL",
+            "B4_BINARIO",
+            "B5_BINARIO_PROGRESIVO",
+            "B6_MATCHING",
+            "B7_LIDERAZGO",
+            "B8_PISCINA",
+            "B9_ESTILO_VIDA"
+          ]
+        },
+        "level": { "type": "integer" },
+        "baseCv": { "type": "number" },
+        "ratePercent": { "type": "number" },
+        "amountBs": { "type": "number" },
+        "status": { "type": "string", "enum": ["pendiente", "disponible", "pagada", "anulada"] },
+        "periodMonth": { "type": "string", "maxLength": 16 },
+        "description": { "type": "string", "maxLength": 240 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "partnerId",
+        "partnerUid",
+        "partnerName",
+        "sourceOrderId",
+        "bonusType",
+        "level",
+        "baseCv",
+        "ratePercent",
+        "amountBs",
+        "status",
+        "periodMonth",
+        "description",
+        "createdAt"
+      ]
+    },
+    "Withdrawal": {
+      "title": "Withdrawal",
+      "description": "Solicitud de retiro de saldo de billetera y aprobación",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "partnerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "partnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "partnerName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "amountBs": { "type": "number" },
+        "method": { "type": "string", "enum": ["qr_bolivia", "transferencia_bancaria", "efectivo_oficina"] },
+        "destinationAccount": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "status": { "type": "string", "enum": ["pendiente", "aprobado", "rechazado"] },
+        "reviewedBy": { "type": "string", "maxLength": 128 },
+        "reviewNote": { "type": "string", "maxLength": 240 },
+        "pinProof": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "partnerId",
+        "partnerUid",
+        "partnerName",
+        "amountBs",
+        "method",
+        "destinationAccount",
+        "status",
+        "reviewedBy",
+        "reviewNote",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PlanConfig": {
+      "title": "PlanConfig",
+      "description": "Configuración global y garantías financieras del Plan de Prosperidad Vive Next",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "cvToBsRate": { "type": "number" },
+        "minMonthlyPv": { "type": "number" },
+        "maxPayoutRatioPercent": { "type": "number" },
+        "binaryEquilibriumPercent": { "type": "number" },
+        "minRealConsumptionBs": { "type": "number" },
+        "accumulationMaxDays": { "type": "integer" },
+        "firstWeekEndDay": { "type": "integer" },
+        "updatedBy": { "type": "string", "maxLength": 128 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "cvToBsRate",
+        "minMonthlyPv",
+        "maxPayoutRatioPercent",
+        "binaryEquilibriumPercent",
+        "minRealConsumptionBs",
+        "accumulationMaxDays",
+        "firstWeekEndDay",
+        "updatedBy",
+        "updatedAt"
+      ]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Bitácora inmutable de auditoría del sistema",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "actorUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "actorEmail": { "type": "string", "maxLength": 200 },
+        "action": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "targetCollection": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "targetId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "summary": { "type": "string", "minLength": 2, "maxLength": 400 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "actorUid", "actorEmail", "action", "targetCollection", "targetId", "summary", "createdAt"]
+    },
+    "AffiliatePin": {
+      "title": "AffiliatePin",
+      "description": "PIN de acceso rápido asignado por el Administrador a un afiliado",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "pinCode": { "type": "string", "minLength": 4, "maxLength": 16, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "partnerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "partnerName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "referralCode": { "type": "string", "minLength": 3, "maxLength": 32 },
+        "active": { "type": "boolean" },
+        "claimedByUid": { "type": "string", "maxLength": 128 },
+        "createdBy": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "pinCode",
+        "partnerId",
+        "partnerName",
+        "referralCode",
+        "active",
+        "claimedByUid",
+        "createdBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Colección de administradores autorizados"
+    },
+    "/partners/{partnerId}": {
+      "schema": { "$ref": "#/entities/Partner" },
+      "description": "Nodos de socios en la red multinivel sin PII sensible"
+    },
+    "/partners/{partnerId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/PartnerPrivateInfo" },
+      "description": "Información privada (PII) aislada del socio"
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Catálogo de productos y paquetes de afiliación"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Pedidos, carrito confirmado y validación de pagos"
+    },
+    "/commissions/{commissionId}": {
+      "schema": { "$ref": "#/entities/Commission" },
+      "description": "Comisiones generadas de los bonos 1 al 9"
+    },
+    "/withdrawals/{withdrawalId}": {
+      "schema": { "$ref": "#/entities/Withdrawal" },
+      "description": "Solicitudes y aprobaciones de retiros de billetera"
+    },
+    "/plan_config/{configId}": {
+      "schema": { "$ref": "#/entities/PlanConfig" },
+      "description": "Parámetros oficiales y garantías financieras del plan"
+    },
+    "/audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Registro inmutable de auditoría administrativa"
+    },
+    "/affiliate_pins/{pinId}": {
+      "schema": { "$ref": "#/entities/AffiliatePin" },
+      "description": "PINs de acceso rápido generados por el Administrador para afiliados"
+    }
+  }
+}

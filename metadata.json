@@ -1,0 +1,6 @@
+{
+  "name": "Vive Next — Plataforma Multinivel & Plan de Prosperidad",
+  "description": "Sistema integral de gestión multinivel, red de socios, cálculo de bonos, billetera de comisiones, tienda mayorista, reportes PDF/Excel y administración para Vive Next Bolivia.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

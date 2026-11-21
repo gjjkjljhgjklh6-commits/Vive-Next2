@@ -1,0 +1,591 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Connectivity check document
+    match /test/connection {
+      allow get: if request.auth != null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Global Primitives & Helpers
+    // -------------------------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerified() && request.auth.token.email == 'gjjkjljhgjklh6@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (isVerified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // -------------------------------------------------------------------------
+    // Validation Blueprints
+    // -------------------------------------------------------------------------
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'email', 'role', 'createdAt'])
+        && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+        && data.role == 'admin'
+        && data.createdAt is timestamp;
+    }
+
+    function isValidPartner(data) {
+      return data.keys().hasAll([
+          'id', 'ownerUid', 'fullName', 'referralCode', 'sponsorId',
+          'binaryParentId', 'binaryLeg', 'packageTier', 'rankId',
+          'status', 'role', 'personalPv', 'personalCv', 'leftBranchCv',
+          'rightBranchCv', 'teamCv', 'directCount', 'activeLines',
+          'firstWeekPurchase', 'uplineUids', 'joinedAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerUid', 'fullName', 'referralCode', 'sponsorId',
+          'binaryParentId', 'binaryLeg', 'packageTier', 'rankId',
+          'status', 'role', 'personalPv', 'personalCv', 'leftBranchCv',
+          'rightBranchCv', 'teamCv', 'directCount', 'activeLines',
+          'firstWeekPurchase', 'uplineUids', 'pinHash', 'joinedAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.ownerUid)
+        && data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 120
+        && data.referralCode is string && data.referralCode.size() >= 3 && data.referralCode.size() <= 32 && data.referralCode.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.sponsorId is string && data.sponsorId.size() <= 128
+        && data.binaryParentId is string && data.binaryParentId.size() <= 128
+        && data.binaryLeg in ['left', 'right', 'root']
+        && data.packageTier in ['base', 'emprendedor', 'elite']
+        && data.rankId in [
+          'consultor_elite', 'bronce', 'plata', 'oro', 'platino',
+          'rubi', 'diamante', 'doble_diamante', 'triple_diamante',
+          'diamante_corona', 'corona_universal'
+        ]
+        && data.status in ['activo', 'pendiente', 'inactivo']
+        && data.role in ['socio', 'lider', 'admin']
+        && data.personalPv is number && data.personalPv >= 0
+        && data.personalCv is number && data.personalCv >= 0
+        && data.leftBranchCv is number && data.leftBranchCv >= 0
+        && data.rightBranchCv is number && data.rightBranchCv >= 0
+        && data.teamCv is number && data.teamCv >= 0
+        && data.directCount is int && data.directCount >= 0
+        && data.activeLines is int && data.activeLines >= 0
+        && data.firstWeekPurchase is bool
+        && data.uplineUids is list && data.uplineUids.size() <= 20
+        && (data.uplineUids.size() == 0 || data.uplineUids[0] is string)
+        && (!('pinHash' in data) || (data.pinHash is string && data.pinHash.size() <= 128))
+        && data.joinedAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAffiliatePin(data) {
+      return data.keys().hasAll([
+          'id', 'pinCode', 'partnerId', 'partnerName', 'referralCode',
+          'active', 'claimedByUid', 'createdBy', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'pinCode', 'partnerId', 'partnerName', 'referralCode',
+          'active', 'claimedByUid', 'createdBy', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.pinCode is string && data.pinCode.size() >= 4 && data.pinCode.size() <= 16 && data.pinCode.matches('^[a-zA-Z0-9_\\-]+$')
+        && isValidId(data.partnerId)
+        && data.partnerName is string && data.partnerName.size() >= 2 && data.partnerName.size() <= 120
+        && data.referralCode is string && data.referralCode.size() >= 3 && data.referralCode.size() <= 32
+        && data.active is bool
+        && data.claimedByUid is string && data.claimedByUid.size() <= 128
+        && isValidId(data.createdBy)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPartnerPrivateInfo(data) {
+      return data.keys().hasAll([
+          'partnerId', 'ownerUid', 'email', 'phone', 'ciNumber',
+          'city', 'bankName', 'bankAccount', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'partnerId', 'ownerUid', 'email', 'phone', 'ciNumber',
+          'city', 'bankName', 'bankAccount', 'updatedAt'
+        ])
+        && isValidId(data.partnerId)
+        && isValidId(data.ownerUid)
+        && data.email is string && data.email.size() <= 200
+        && data.phone is string && data.phone.size() <= 40
+        && data.ciNumber is string && data.ciNumber.size() <= 40
+        && data.city is string && data.city.size() <= 80
+        && data.bankName is string && data.bankName.size() <= 80
+        && data.bankAccount is string && data.bankAccount.size() <= 64
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll([
+          'id', 'sku', 'name', 'category', 'isPackage', 'packageTier',
+          'retailPriceBs', 'wholesalePriceBs', 'firstPurchaseSurchargeBs',
+          'pv', 'cv', 'stock', 'active', 'imageUrl', 'description',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'sku', 'name', 'category', 'isPackage', 'packageTier',
+          'retailPriceBs', 'wholesalePriceBs', 'firstPurchaseSurchargeBs',
+          'pv', 'cv', 'stock', 'active', 'imageUrl', 'description',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.sku is string && data.sku.size() >= 2 && data.sku.size() <= 40
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 120
+        && data.category is string && data.category.size() >= 2 && data.category.size() <= 60
+        && data.isPackage is bool
+        && data.packageTier in ['none', 'base', 'emprendedor', 'elite']
+        && data.retailPriceBs is number && data.retailPriceBs >= 0
+        && data.wholesalePriceBs is number && data.wholesalePriceBs >= 0
+        && data.firstPurchaseSurchargeBs is number && data.firstPurchaseSurchargeBs >= 0
+        && data.pv is number && data.pv >= 0
+        && data.cv is number && data.cv >= 0
+        && data.stock is int && data.stock >= 0
+        && data.active is bool
+        && data.imageUrl is string && data.imageUrl.size() <= 150000
+        && data.description is string && data.description.size() <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll([
+          'id', 'orderNumber', 'buyerUid', 'partnerId', 'partnerName',
+          'sponsorId', 'isFirstPurchase', 'items', 'subtotalBs',
+          'surchargeBs', 'totalBs', 'totalPv', 'totalCv', 'paymentMethod',
+          'paymentReference', 'receiptNote', 'paymentStatus', 'validatedBy',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'orderNumber', 'buyerUid', 'partnerId', 'partnerName',
+          'sponsorId', 'isFirstPurchase', 'items', 'subtotalBs',
+          'surchargeBs', 'totalBs', 'totalPv', 'totalCv', 'paymentMethod',
+          'paymentReference', 'receiptNote', 'paymentStatus', 'validatedBy',
+          'pinProof', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.orderNumber is string && data.orderNumber.size() >= 3 && data.orderNumber.size() <= 40
+        && isValidId(data.buyerUid)
+        && isValidId(data.partnerId)
+        && data.partnerName is string && data.partnerName.size() >= 1 && data.partnerName.size() <= 120
+        && data.sponsorId is string && data.sponsorId.size() <= 128
+        && data.isFirstPurchase is bool
+        && data.items is list && data.items.size() >= 1 && data.items.size() <= 25
+        && data.items[0] is map
+        && data.subtotalBs is number && data.subtotalBs >= 0
+        && data.surchargeBs is number && data.surchargeBs >= 0
+        && data.totalBs is number && data.totalBs > 0
+        && data.totalPv is number && data.totalPv >= 0
+        && data.totalCv is number && data.totalCv >= 0
+        && data.paymentMethod in ['efectivo', 'qr', 'transferencia']
+        && data.paymentReference is string && data.paymentReference.size() <= 120
+        && data.receiptNote is string && data.receiptNote.size() <= 300
+        && data.paymentStatus in ['pendiente', 'validado', 'rechazado']
+        && data.validatedBy is string && data.validatedBy.size() <= 128
+        && (!('pinProof' in data) || (isValidId(data.pinProof) && data.pinProof.size() >= 16))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCommission(data) {
+      return data.keys().hasAll([
+          'id', 'partnerId', 'partnerUid', 'partnerName', 'sourceOrderId',
+          'bonusType', 'level', 'baseCv', 'ratePercent', 'amountBs',
+          'status', 'periodMonth', 'description', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'partnerId', 'partnerUid', 'partnerName', 'sourceOrderId',
+          'bonusType', 'level', 'baseCv', 'ratePercent', 'amountBs',
+          'status', 'periodMonth', 'description', 'createdAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.partnerId)
+        && isValidId(data.partnerUid)
+        && data.partnerName is string && data.partnerName.size() >= 1 && data.partnerName.size() <= 120
+        && data.sourceOrderId is string && data.sourceOrderId.size() <= 128
+        && data.bonusType in [
+          'B1_VENTA_DIRECTA', 'B2_INICIO_RAPIDO', 'B3_UNILEVEL',
+          'B4_BINARIO', 'B5_BINARIO_PROGRESIVO', 'B6_MATCHING',
+          'B7_LIDERAZGO', 'B8_PISCINA', 'B9_ESTILO_VIDA'
+        ]
+        && data.level is int && data.level >= 0 && data.level <= 10
+        && data.baseCv is number && data.baseCv >= 0
+        && data.ratePercent is number && data.ratePercent >= 0 && data.ratePercent <= 100
+        && data.amountBs is number && data.amountBs >= 0
+        && data.status in ['pendiente', 'disponible', 'pagada', 'anulada']
+        && data.periodMonth is string && data.periodMonth.size() >= 4 && data.periodMonth.size() <= 16
+        && data.description is string && data.description.size() >= 2 && data.description.size() <= 240
+        && data.createdAt is timestamp;
+    }
+
+    function isValidWithdrawal(data) {
+      return data.keys().hasAll([
+          'id', 'partnerId', 'partnerUid', 'partnerName', 'amountBs',
+          'method', 'destinationAccount', 'status', 'reviewedBy',
+          'reviewNote', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'partnerId', 'partnerUid', 'partnerName', 'amountBs',
+          'method', 'destinationAccount', 'status', 'reviewedBy',
+          'reviewNote', 'pinProof', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.partnerId)
+        && isValidId(data.partnerUid)
+        && data.partnerName is string && data.partnerName.size() >= 1 && data.partnerName.size() <= 120
+        && data.amountBs is number && data.amountBs > 0
+        && data.method in ['qr_bolivia', 'transferencia_bancaria', 'efectivo_oficina']
+        && data.destinationAccount is string && data.destinationAccount.size() >= 3 && data.destinationAccount.size() <= 120
+        && data.status in ['pendiente', 'aprobado', 'rechazado']
+        && data.reviewedBy is string && data.reviewedBy.size() <= 128
+        && data.reviewNote is string && data.reviewNote.size() <= 240
+        && (!('pinProof' in data) || (isValidId(data.pinProof) && data.pinProof.size() >= 16))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPlanConfig(data) {
+      return data.keys().hasAll([
+          'id', 'cvToBsRate', 'minMonthlyPv', 'maxPayoutRatioPercent',
+          'binaryEquilibriumPercent', 'minRealConsumptionBs',
+          'accumulationMaxDays', 'firstWeekEndDay', 'updatedBy', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'cvToBsRate', 'minMonthlyPv', 'maxPayoutRatioPercent',
+          'binaryEquilibriumPercent', 'minRealConsumptionBs',
+          'accumulationMaxDays', 'firstWeekEndDay', 'updatedBy', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.cvToBsRate is number && data.cvToBsRate > 0
+        && data.minMonthlyPv is number && data.minMonthlyPv >= 0
+        && data.maxPayoutRatioPercent is number && data.maxPayoutRatioPercent > 0 && data.maxPayoutRatioPercent <= 100
+        && data.binaryEquilibriumPercent is number && data.binaryEquilibriumPercent >= 0 && data.binaryEquilibriumPercent <= 100
+        && data.minRealConsumptionBs is number && data.minRealConsumptionBs >= 0
+        && data.accumulationMaxDays is int && data.accumulationMaxDays > 0
+        && data.firstWeekEndDay is int && data.firstWeekEndDay >= 1 && data.firstWeekEndDay <= 28
+        && data.updatedBy is string && data.updatedBy.size() <= 128
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll([
+          'id', 'actorUid', 'actorEmail', 'action',
+          'targetCollection', 'targetId', 'summary', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'actorUid', 'actorEmail', 'action',
+          'targetCollection', 'targetId', 'summary', 'createdAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.actorUid)
+        && data.actorEmail is string && data.actorEmail.size() <= 200
+        && data.action is string && data.action.size() >= 2 && data.action.size() <= 80
+        && data.targetCollection is string && data.targetCollection.size() >= 2 && data.targetCollection.size() <= 60
+        && data.targetId is string && data.targetId.size() >= 1 && data.targetId.size() <= 128
+        && data.summary is string && data.summary.size() >= 2 && data.summary.size() <= 400
+        && data.createdAt is timestamp;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection Rules
+    // -------------------------------------------------------------------------
+    match /admins/{uid} {
+      allow get: if isValidId(uid) && isVerified() && (request.auth.uid == uid || isAdmin());
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(uid) && isAdmin() && isValidAdmin(incoming()) && incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /partners/{partnerId} {
+      allow get: if isValidId(partnerId) && (
+        (isVerified() && (
+          isAdmin() ||
+          existing().ownerUid == request.auth.uid ||
+          request.auth.uid in existing().uplineUids ||
+          existing().id == 'vn_root'
+        )) ||
+        (
+          resource != null &&
+          'pinHash' in existing() &&
+          existing().pinHash is string &&
+          existing().pinHash.size() >= 16 &&
+          get(/databases/$(database)/documents/affiliate_pins/$(existing().pinHash)).data.active == true
+        ) ||
+        (resource != null && existing().id == 'vn_root')
+      );
+      allow list: if (isVerified() && (
+        isBootstrappedAdmin() ||
+        resource.data.ownerUid == request.auth.uid ||
+        request.auth.uid in resource.data.uplineUids ||
+        resource.data.id == 'vn_root'
+      )) || (
+        resource.data.status in ['activo', 'pendiente', 'inactivo']
+      );
+      allow create: if isValidId(partnerId) && isVerified() && isValidPartner(incoming())
+        && incoming().joinedAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            incoming().ownerUid == request.auth.uid &&
+            incoming().role == 'socio' &&
+            incoming().rankId == 'consultor_elite' &&
+            incoming().personalPv == 0 &&
+            incoming().personalCv == 0 &&
+            incoming().leftBranchCv == 0 &&
+            incoming().rightBranchCv == 0 &&
+            incoming().teamCv == 0
+          )
+        );
+      allow update: if isValidId(partnerId) && isVerified() && isValidPartner(incoming())
+        && incoming().id == existing().id
+        && incoming().joinedAt == existing().joinedAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            existing().ownerUid == request.auth.uid &&
+            incoming().ownerUid == existing().ownerUid &&
+            incoming().role == existing().role &&
+            incoming().rankId == existing().rankId &&
+            incoming().status == existing().status &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'updatedAt'])
+          ) ||
+          (
+            'pinHash' in existing() &&
+            existing().pinHash is string &&
+            existing().pinHash.size() >= 16 &&
+            get(/databases/$(database)/documents/affiliate_pins/$(existing().pinHash)).data.active == true &&
+            get(/databases/$(database)/documents/affiliate_pins/$(existing().pinHash)).data.partnerId == partnerId &&
+            get(/databases/$(database)/documents/affiliate_pins/$(existing().pinHash)).data.claimedByUid == '' &&
+            getAfter(/databases/$(database)/documents/affiliate_pins/$(existing().pinHash)).data.claimedByUid == request.auth.uid &&
+            incoming().ownerUid == request.auth.uid &&
+            incoming().role == existing().role &&
+            incoming().rankId == existing().rankId &&
+            incoming().status == existing().status &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['ownerUid', 'uplineUids', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(partnerId) && isAdmin();
+
+      match /private/{docId} {
+        allow get: if isValidId(partnerId) && isValidId(docId) && isVerified() && (
+          isAdmin() ||
+          get(/databases/$(database)/documents/partners/$(partnerId)).data.ownerUid == request.auth.uid
+        );
+        allow list: if false;
+        allow create: if isValidId(partnerId) && isValidId(docId) && isVerified() && isValidPartnerPrivateInfo(incoming())
+          && incoming().partnerId == partnerId
+          && incoming().updatedAt == request.time
+          && (
+            isAdmin() ||
+            (
+              incoming().ownerUid == request.auth.uid &&
+              get(/databases/$(database)/documents/partners/$(partnerId)).data.ownerUid == request.auth.uid
+            )
+          );
+        allow update: if isValidId(partnerId) && isValidId(docId) && isVerified() && isValidPartnerPrivateInfo(incoming())
+          && incoming().partnerId == existing().partnerId
+          && incoming().updatedAt == request.time
+          && (
+            isAdmin() ||
+            (
+              incoming().ownerUid == existing().ownerUid &&
+              existing().ownerUid == request.auth.uid &&
+              incoming().diff(existing()).affectedKeys().hasOnly(['phone', 'ciNumber', 'city', 'bankName', 'bankAccount', 'updatedAt'])
+            ) ||
+            (
+              incoming().ownerUid == request.auth.uid &&
+              getAfter(/databases/$(database)/documents/partners/$(partnerId)).data.ownerUid == request.auth.uid &&
+              incoming().diff(existing()).affectedKeys().hasOnly(['ownerUid', 'updatedAt'])
+            )
+          );
+        allow delete: if isValidId(partnerId) && isValidId(docId) && isAdmin();
+      }
+    }
+
+    match /products/{productId} {
+      allow get: if isValidId(productId) && ((resource != null && resource.data.active == true) || isAdmin());
+      allow list: if resource.data.active == true || isBootstrappedAdmin();
+      allow create: if isValidId(productId) && isAdmin() && isValidProduct(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(productId) && isAdmin() && isValidProduct(incoming())
+        && incoming().id == existing().id
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(productId) && isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow get: if isValidId(orderId) && (
+        (isVerified() && (isAdmin() || existing().buyerUid == request.auth.uid)) ||
+        (resource != null && existing().partnerId is string && existing().partnerId.size() >= 1)
+      );
+      allow list: if (isVerified() && (isBootstrappedAdmin() || resource.data.buyerUid == request.auth.uid))
+        || (resource.data.partnerId is string && resource.data.partnerId.size() >= 1);
+      allow create: if isValidId(orderId) && isValidOrder(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            isVerified() &&
+            incoming().buyerUid == request.auth.uid &&
+            incoming().paymentStatus == 'pendiente' &&
+            incoming().validatedBy == ''
+          ) ||
+          (
+            'pinProof' in incoming() &&
+            isValidId(incoming().pinProof) &&
+            exists(/databases/$(database)/documents/affiliate_pins/$(incoming().pinProof)) &&
+            get(/databases/$(database)/documents/affiliate_pins/$(incoming().pinProof)).data.active == true &&
+            get(/databases/$(database)/documents/affiliate_pins/$(incoming().pinProof)).data.partnerId == incoming().partnerId &&
+            incoming().paymentStatus == 'pendiente' &&
+            incoming().validatedBy == ''
+          )
+        );
+      allow update: if isValidId(orderId) && isVerified() && isValidOrder(incoming())
+        && incoming().id == existing().id
+        && incoming().buyerUid == existing().buyerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            existing().buyerUid == request.auth.uid &&
+            existing().paymentStatus == 'pendiente' &&
+            incoming().paymentStatus == 'pendiente' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['paymentReference', 'receiptNote', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(orderId) && isAdmin();
+    }
+
+    match /commissions/{commissionId} {
+      allow get: if isValidId(commissionId) && (
+        (isVerified() && (isAdmin() || existing().partnerUid == request.auth.uid)) ||
+        (resource != null && existing().partnerId is string && existing().partnerId.size() >= 1)
+      );
+      allow list: if (isVerified() && (isBootstrappedAdmin() || resource.data.partnerUid == request.auth.uid))
+        || (resource.data.partnerId is string && resource.data.partnerId.size() >= 1);
+      allow create: if isValidId(commissionId) && isAdmin() && isValidCommission(incoming())
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(commissionId) && isAdmin() && isValidCommission(incoming())
+        && incoming().id == existing().id
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(commissionId) && isAdmin();
+    }
+
+    match /withdrawals/{withdrawalId} {
+      allow get: if isValidId(withdrawalId) && (
+        (isVerified() && (isAdmin() || existing().partnerUid == request.auth.uid)) ||
+        (resource != null && existing().partnerId is string && existing().partnerId.size() >= 1)
+      );
+      allow list: if (isVerified() && (isBootstrappedAdmin() || resource.data.partnerUid == request.auth.uid))
+        || (resource.data.partnerId is string && resource.data.partnerId.size() >= 1);
+      allow create: if isValidId(withdrawalId) && isValidWithdrawal(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            isVerified() &&
+            incoming().partnerUid == request.auth.uid &&
+            incoming().status == 'pendiente' &&
+            incoming().reviewedBy == ''
+          ) ||
+          (
+            'pinProof' in incoming() &&
+            isValidId(incoming().pinProof) &&
+            exists(/databases/$(database)/documents/affiliate_pins/$(incoming().pinProof)) &&
+            get(/databases/$(database)/documents/affiliate_pins/$(incoming().pinProof)).data.active == true &&
+            get(/databases/$(database)/documents/affiliate_pins/$(incoming().pinProof)).data.partnerId == incoming().partnerId &&
+            incoming().status == 'pendiente' &&
+            incoming().reviewedBy == ''
+          )
+        );
+      allow update: if isValidId(withdrawalId) && isAdmin() && isValidWithdrawal(incoming())
+        && incoming().id == existing().id
+        && incoming().partnerUid == existing().partnerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(withdrawalId) && isAdmin();
+    }
+
+    match /plan_config/{configId} {
+      allow get: if isValidId(configId) && (isVerified() || configId == 'default');
+      allow list: if isVerified() && resource.data.cvToBsRate > 0;
+      allow create, update: if isValidId(configId) && isAdmin() && isValidPlanConfig(incoming())
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    match /audit_logs/{logId} {
+      allow get: if isValidId(logId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(logId) && isAdmin() && isValidAuditLog(incoming())
+        && incoming().actorUid == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(logId) && isAdmin();
+    }
+
+    match /affiliate_pins/{pinId} {
+      allow get: if isValidId(pinId) && (
+        isAdmin() ||
+        (resource != null && existing().active == true && (
+          !isSignedIn() ||
+          (isVerified() && (existing().claimedByUid == '' || existing().claimedByUid == request.auth.uid))
+        ))
+      );
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(pinId) && isAdmin() && isValidAffiliatePin(incoming())
+        && incoming().id == pinId
+        && incoming().createdBy == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(pinId) && isVerified() && isValidAffiliatePin(incoming())
+        && incoming().id == existing().id
+        && incoming().partnerId == existing().partnerId
+        && incoming().createdBy == existing().createdBy
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            existing().active == true &&
+            existing().claimedByUid == '' &&
+            incoming().claimedByUid == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['claimedByUid', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(pinId) && isAdmin();
+    }
+  }
+}
